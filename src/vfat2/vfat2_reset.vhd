@@ -49,7 +49,7 @@ begin
                     delay <= 2047;
                 elsif (delay /= 0) then
                     vfat2_reset_o <= '0';
-                    delay <= delay - delay;
+                    delay <= delay - 1;
                 else
                     vfat2_reset_o <= '1';
                 end if;
