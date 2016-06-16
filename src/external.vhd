@@ -8,7 +8,18 @@
 -- Project Name:   OptoHybrid v2
 -- Target Devices: xc6vlx130t-1ff1156
 -- Tool versions:  ISE  P.20131013
--- Description: 
+-- Description:
+--
+-- This module handles the external signals: the input trigger and the
+-- output SBits. At the ref_clk_i rising edge, the ext_trigger_i signal
+-- is checked and the vfat2_t1_o t1_t signal is assigned correspondingly.
+-- only if there was no external trigger at the previous clock in order
+-- to be sure that the trigger signal has come back to zero. This forbids
+-- two consecutive triggers.
+-- 6 output lines, ext_sbits_o, are dedicated to provide 6 SBits (in the
+-- sens of a logical "or" of the 8 sbits of a vfat2) to the exterior. The
+-- vfat2 are selected through the 6 x 5 bits = 30 bits signal sys_sbit_sel_i
+-- among the 24 vfats. Each group of 5 bits represents a vfat2 number.
 --
 ----------------------------------------------------------------------------------
 
@@ -32,8 +43,11 @@ port(
     
     -- Sbits
     vfat2_sbits_i       : in sbits_array_t(23 downto 0);
-    sys_sbit_sel_i      : in std_logic_vector(29 downto 0);
-    ext_sbits_o         : out std_logic_vector(5 downto 0)
+    sys_sbit_sel_i      : in std_logic_vector(29 downto 0);-- 30 bits = 6 x 5 bits to selected 6 vfats
+                                                           -- among the 24 vfats available 
+    ext_sbits_o         : out std_logic_vector(5 downto 0) -- 6 output lines (through hdmi cable)
+                                                           -- for sbits (logical "or" of 128 channels)
+                                                           -- of 6 selected vfats
     
 );
 end external;
@@ -49,6 +63,7 @@ architecture Behavioral of external is
 begin
 
     --== Trigger ==--
+    -- build the trigger signal inside the vfat2_t1 signal at every clock rising edge
 
     process(ref_clk_i)         
     begin
@@ -66,14 +81,14 @@ begin
     
     or_loop : for I in 0 to 23 generate
     begin
-        
+        -- logical "or" of the 8 sbits of each vfat
         ors(I) <= vfat2_sbits_i(I)(0) or vfat2_sbits_i(I)(1) or vfat2_sbits_i(I)(2) or vfat2_sbits_i(I)(3) or vfat2_sbits_i(I)(4) or vfat2_sbits_i(I)(5) or vfat2_sbits_i(I)(6) or vfat2_sbits_i(I)(7);
         
     end generate;
     
     sbits_sel_loop : for I in 0 to 5 generate
     begin
-    
+        -- output the selected vfats logical "or" to the output line
         sbits_sel(I) <= to_integer(unsigned(sys_sbit_sel_i((I * 5 + 4) downto (I * 5))));
         ext_sbits_o(I) <= ors(sbits_sel(I));
     
